@@ -1,0 +1,40 @@
+nutanix_username = "admin"
+nutanix_password = "yourPassword"
+nutanix_endpoint = "10.11.230.91"   # Prism Central IP/FQDN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

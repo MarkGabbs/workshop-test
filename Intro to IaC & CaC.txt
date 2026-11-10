@@ -1,0 +1,458 @@
+<#
+Mark Gabryjelski
+2026-10-21
+Started creating a course to introduce 3 topics...
+Git, Terraform, & Ansible
+#>
+
+
+
+
+
+<#
+Let's get started
+Have a windows or linux VM ready to go?
+Please just deploy something that you have administrator or root access to.
+You can use your own desktop, that's fine if you want...
+...I would rather you didn't play around on your production machine.
+#>
+
+
+
+
+
+
+
+<#
+now that we are connected via SSH...
+Let's install Git on our linux instances....
+#>
+
+### update our repository
+sudo apt update
+
+### Run updates/ patches
+sudo apt upgrade
+
+### Install Git
+sudo apt install git -y
+
+### Change to your Documents folder...
+cd ~/Documents
+
+### Clone the classroom files needed
+git clone https://github.com/MarkGabbs/Intro-IaC-and-CaC.git
+
+### change into the directory of our class content
+cd ...
+
+### Remove Git specific files...
+### If you are not planning on "pushing" back up into GitHub
+### This hidden folder contains all the info Git needs to manage versioning.
+### You would never do this in production.
+rm -rf Start-Documentation/.git
+
+
+
+
+
+<#
+Want to install Git on your Windows machine?
+couple of ways to do that...but....
+Do this on Linux, please....
+#>
+
+### Via normal Windows Installer
+### Then install, all defaults...lots of prompts 14 last I counted....
+https://git-scm.com/download/win
+
+### Open PowerShell
+### be in the directory you want the content of this class to be in....
+git clone https://github.com/MarkGabbs/Intro-CaC-and-IaC.git
+
+### Remove Git specific files...
+### If you are not planning on "pushing" back up into GitHub
+### This hidden folder contains all the info Git needs to manage versioning.
+### You would never do this in production.
+Remove-Item -Recurse -Force Intro-CaC-and-IaC\.git
+
+<#
+Not the way people interact with Git, but a way to get the files..
+Download a ZIP file of the class....
+Open the repository in your browser.
+	https://github.com/MarkGabbs/Intro-CaC-and-IaC.git
+Click the green "Code" button (near the top right).
+Select Download ZIP.
+#>
+
+
+
+
+
+<#
+We are not going to do this during the workshop....
+Let's talk about this....updating & sharing code amongst your team....
+If you were updating code....
+Edit files as needed, then:
+#>
+git add .
+git commit -m "Describe your changes"
+git push
+
+
+
+
+
+
+
+
+
+
+<#
+Terraform
+Providers Documentation - https://developer.hashicorp.com/terraform/language/providers
+	https://registry.terraform.io/browse/providers?product_intent=terraform
+	there's 152 pages....
+	For those of us thinking Public Cloud....
+		AWS
+			https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+		Azure
+			https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
+		GCP
+			https://registry.terraform.io/providers/hashicorp/google/latest/docs
+		K8s
+			https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs
+	For those us coming from traditional IT backgrounds....
+		Arista
+			https://registry.terraform.io/providers/aristanetworks/cloudeos/latest/docs
+		Azure Active Directory (EntraID?)
+			https://registry.terraform.io/providers/hashicorp/azuread/latest/docs
+		Cisco
+			https://registry.terraform.io/providers/CiscoDevNet/ciscoasa/latest/docs
+			https://registry.terraform.io/providers/CiscoDevNet/ciscomcd/latest/docs
+		Dell
+						https://registry.terraform.io/providers/dell/redfish/latest/docs/resources/dell_system_attributes
+		HPE
+			https://registry.terraform.io/providers/HPE/hpegl/latest/docs
+		Juniper
+			https://registry.terraform.io/providers/Juniper/apstra/latest/docs
+			https://registry.terraform.io/providers/Juniper/mist/latest/docs
+		Microsoft Active Directory
+			https://registry.terraform.io/providers/hashicorp/ad/latest/docs
+		Nutanix
+			https://registry.terraform.io/providers/nutanix/nutanix/latest/docs
+		VMware
+			https://registry.terraform.io/providers/vmware/vsphere/latest/docs
+	Yes, even Terraform has a Terraform Provider....
+		https://registry.terraform.io/providers/hashicorp/tfe/latest/docs
+#>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Modules
+The directory, and its contents.
+This is where you run Terraform "init", "plan", "apply", "destroy"
+A module is a collection of *.tf and/or *.json files, considered to be a logical unit.
+	A module can contain other modules.
+
+Workspace
+
+
+Command				Purpose
+terraform init		Initialize the working directory. Downloads providers and modules, and sets up the backend.
+terraform plan		Show what changes Terraform will make (create, update, or destroy resources) without actually doing them.
+terraform apply		Apply the changes to reach the desired state defined in your configuration.
+terraform destroy	Tear down all resources managed by the current Terraform configuration.
+
+
+
+
+
+class-lab/
+├── student-vms/          # the main.tf we just created
+│   ├── main.tf
+│   └── terraform.tfvars
+├── networking/           # maybe VLANs, port groups, etc.
+│   └── main.tf
+└── dns-only/             # if someone only wants the DNS part
+    └── main.tf
+
+...or maybe like this....
+
+infrastructure/
+├── environments/
+│   ├── lab/
+│   ├── staging/
+│   └── prod/
+└── modules/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<#
+Deploy the class using Terraform
+#>
+
+
+
+
+
+<#
+Linux Installation
+#>
+### Check for the validity of the thing you're about to install
+sudo apt update
+sudo apt install -y gnupg software-properties-common
+### then
+### Get the HashiCorp GPG Key
+wget -O- https://apt.releases.hashicorp.com/gpg | \
+gpg --dearmor | \
+sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+### then
+### you can look over there for these new packages I'm asking form
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+### then
+### Check out what's new, with the new approved list of places to search in...
+sudo apt update
+sudo apt install terraform
+### then, verify your installation
+terraform -help
+
+
+
+
+
+
+
+
+So let's look at 00-stage-workshop-all-as-one
+...
+PowerShell with CSVs vs Terraform's single main.tf file
+Intro-IaC-and-CaC/
+├── 00-stage-workshop-all-as-one/
+│   ├── dns-entries.csv		# CSV file holding hostnames & IPs
+│   ├── dns-entries.ps1		# PowerShell script to create DNS entries
+│   ├── IaC-and-CaC.csv		# CSV file holding info about the VMs
+│   ├── IaC-and-CaC.ps1		# PowerShell script to deploy VMs
+│   └── main.tf				# Terraform "plan" to do the same
+
+
+
+
+
+But let's look at 01-stage-workshop-broken-up
+Intro-IaC-and-CaC/
+├── 01-stage-workshop-broken-up/
+│   ├── main.tf
+│   ├── README.tf
+│   ├── terraform.tfvars
+│   ├── variables.tf
+
+
+
+
+
+README.md ....well....um.....
+variables.tf declares variables
+	This is a conventional name (not required by Terraform) for a file.
+	It contains "variable blocks"
+	These DECLARE input variables
+	Declarations stay in the reusable .tf
+terraform.tfvars assigns values to them.
+	This is a special filename that Terraform automatically loads.
+	It contains assignments that set concrete values for the variables you declared:
+	The same config can be reused by swapping .tfvars files without changing the code.
+		Think about it as you do exactly the same thing....
+		...for Prod & Dev.....
+		...you have a folder for Prod, and you have a folder for Dev....
+		...but they have different "password repositories" that you need to use....
+variables.tf says “these are the inputs this configuration accepts,”
+...while terraform.tfvars says “here are the actual values for this run.”
+
+
+
+
+
+
+
+
+
+
+
+
+
+Initial plan was to deploy 3 VMs
+...done
+Changed *.tf to deploy 4 VMs
+deployed 4th
+
+
+
+
+
+Deploy 03-aws-vpc-only
+	review terraform.tfstate file
+	Lots of info about your newly created VPC
+	Let's run some commands....
+
+terraform state list
+	
+terrafrom state show aws_vps....
+	output to JSON (safe for later)
+terraform show
+	this can be massive output if you have a large environment!
+terraform state show
+	have to add that VPC name again....
+
+
+Don't forget to destory!
+
+
+
+
+
+
+
+
+Provide 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<#
+Ansible
+#>
+
+
+
+
+
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+sudo apt install ansible
+
+
+
+
+
+
+
+
+### Install & then use WSL
+### WSL (Windows Subsystem for Linux)
+### not heard of it?
+### well, Red Hat (who owns / runs Ansible) isn't running the Control Plane on Windows!
+
+
+
+
+
+# Uses the default inventory from ansible.cfg
+ansible-playbook deploy-vms.yml
+
+# Or explicitly
+ansible-playbook -i inventory.ini configure-dns.yml
+
+
+
+
+
+
+
+
+
+Normal patternsSmall project / class (very common):
+ansible/
+├── deploy-vms.yml
+├── configure-dns.yml
+├── inventory.ini
+└── group_vars/
+
+
+
+
+Standard roles layout (most common once it grows):
+ansible/
+├── playbooks/
+│   ├── site.yml
+│   ├── deploy-vms.yml
+│   └── configure-dns.yml
+├── roles/
+│   ├── vmware/
+│   └── dns/
+├── inventory/
+└── group_vars/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
