@@ -1,0 +1,5 @@
+---
+# Windows baseline defaults
+rdp_require_nla: true
+ad_user: "VMWARE\\svc_ansible"
+ad_group: "VMWARE\\Domain Admins"

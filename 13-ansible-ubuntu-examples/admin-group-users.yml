@@ -1,0 +1,45 @@
+---
+- name: Configure admin group and users (WEI)
+  hosts: linux
+  become: true
+  gather_facts: false
+
+  vars:
+    admin_group: "WEI"
+    admin_user: "WEI"
+    ansible_user: "ANSIBLE"
+
+  tasks:
+    - name: Create WEI admin group
+      ansible.builtin.group:
+        name: "{{ admin_group }}"
+        state: present
+
+    - name: Grant WEI group sudo (password required)
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/WEI
+        content: |
+          # Members of the WEI group may use sudo (password required)
+          %{{ admin_group }} ALL=(ALL:ALL) ALL
+        mode: '0440'
+        owner: root
+        group: root
+        validate: 'visudo -cf %s'
+
+    - name: Create WEI user and add to WEI group
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        groups: "{{ admin_group }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Create ANSIBLE user and add to WEI group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: "{{ admin_group }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+        state: present

@@ -1,0 +1,14 @@
+---
+# Linux / Ubuntu connection
+ansible_connection: ssh
+ansible_python_interpreter: /usr/bin/python3
+
+# Privilege escalation (works with -K or passwordless sudo)
+ansible_become: true
+ansible_become_method: sudo
+
+# Baseline variables used by the Linux playbooks
+ntp_server: "ntp01.vmware.wei"
+admin_group: "WEI"
+admin_user: "WEI"
+ansible_user: "ANSIBLE"

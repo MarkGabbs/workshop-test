@@ -1,0 +1,190 @@
+---
+- name: Ubuntu baseline configuration
+  hosts: linux
+  become: true
+  gather_facts: true
+
+  vars:
+    ntp_server: "ntp01.vmware.wei"
+    admin_group: "WEI"
+    admin_user: "WEI"
+    ansible_user: "ANSIBLE"
+
+  tasks:
+    # =========================================================================
+    # 1. Unattended upgrades — weekly, Sunday 05:00
+    # =========================================================================
+    - name: Install unattended-upgrades
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: present
+        update_cache: true
+
+    - name: Enable unattended-upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Download-Upgradeable-Packages "1";
+          APT::Periodic::AutocleanInterval "7";
+          APT::Periodic::Unattended-Upgrade "1";
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Configure apt-daily-upgrade timer for Sunday 05:00
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
+        content: |
+          [Timer]
+          OnCalendar=
+          OnCalendar=Sun *-*-* 05:00:00
+          RandomizedDelaySec=0
+          Persistent=true
+        mode: '0644'
+      notify: Reload systemd and restart apt-daily-upgrade timer
+
+    # =========================================================================
+    # 2. UFW firewall — allow SSH + ping only
+    # =========================================================================
+    - name: Install UFW
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: Set UFW default policies
+      community.general.ufw:
+        default: "{{ item.default }}"
+        direction: "{{ item.direction }}"
+      loop:
+        - { default: deny,  direction: incoming }
+        - { default: allow, direction: outgoing }
+
+    - name: Allow SSH
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+        comment: "SSH for Ansible and admin"
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+        logging: 'low'
+
+    # =========================================================================
+    # 3. Time synchronization — chrony → ntp01.vmware.wei
+    # =========================================================================
+    - name: Install chrony
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+
+    - name: Disable systemd-timesyncd if present
+      ansible.builtin.systemd:
+        name: systemd-timesyncd
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Configure chrony to use internal NTP server
+      ansible.builtin.copy:
+        dest: /etc/chrony/sources.d/internal.sources
+        content: |
+          server {{ ntp_server }} iburst
+        mode: '0644'
+        owner: root
+        group: root
+      notify: Restart chrony
+
+    - name: Ensure chrony is enabled and started
+      ansible.builtin.systemd:
+        name: chrony
+        state: started
+        enabled: true
+
+    # =========================================================================
+    # 4. Admin group + users (WEI group with sudo)
+    # =========================================================================
+    - name: Create WEI admin group
+      ansible.builtin.group:
+        name: "{{ admin_group }}"
+        state: present
+
+    - name: Grant WEI group sudo (password required)
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/WEI
+        content: |
+          # Members of the WEI group may use sudo (password required)
+          %{{ admin_group }} ALL=(ALL:ALL) ALL
+        mode: '0440'
+        owner: root
+        group: root
+        validate: 'visudo -cf %s'
+
+    - name: Create WEI user and add to WEI group
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        groups: "{{ admin_group }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Create ANSIBLE user and add to WEI group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: "{{ admin_group }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    # =========================================================================
+    # 5. Service & kernel hardening (Ansible- and login-friendly)
+    # =========================================================================
+    - name: Disable unnecessary services (safe for servers)
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+        masked: true
+      loop:
+        - cups
+        - cups-browsed
+        - avahi-daemon
+        - bluetooth
+        - ModemManager
+        - whoopsie
+      failed_when: false
+
+    - name: Apply recommended sysctl hardening (ping remains allowed)
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - { name: 'net.ipv4.conf.all.accept_redirects',     value: '0' }
+        - { name: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+        - { name: 'net.ipv4.conf.all.send_redirects',       value: '0' }
+        - { name: 'net.ipv4.conf.default.send_redirects',   value: '0' }
+        - { name: 'net.ipv4.conf.all.accept_source_route',  value: '0' }
+        - { name: 'net.ipv4.conf.default.accept_source_route', value: '0' }
+        - { name: 'net.ipv4.icmp_echo_ignore_broadcasts',   value: '1' }
+        - { name: 'net.ipv4.icmp_ignore_bogus_error_responses', value: '1' }
+        - { name: 'net.ipv4.icmp_echo_ignore_all',          value: '0' }
+        - { name: 'net.ipv4.tcp_syncookies',                value: '1' }
+
+  handlers:
+    - name: Reload systemd and restart apt-daily-upgrade timer
+      ansible.builtin.systemd:
+        name: apt-daily-upgrade.timer
+        daemon_reload: true
+        state: restarted
+        enabled: true
+
+    - name: Restart chrony
+      ansible.builtin.systemd:
+        name: chrony
+        state: restarted

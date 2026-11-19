@@ -1,0 +1,45 @@
+---
+- name: Allow Windows hosts to respond to ping (ICMP Echo Request)
+  hosts: windows
+  gather_facts: false
+  become: false          # WinRM already runs elevated
+
+  tasks:
+    - name: Enable File and Printer Sharing ICMP Echo Request rules (IPv4 + IPv6)
+      ansible.windows.win_powershell:
+        script: |
+          $rules = @(
+            "File and Printer Sharing (Echo Request - ICMPv4-In)",
+            "File and Printer Sharing (Echo Request - ICMPv6-In)"
+          )
+          foreach ($rule in $rules) {
+            Enable-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
+          }
+      changed_when: false
+
+    - name: Enable Core Networking Diagnostics ICMP Echo Request rules (IPv4 + IPv6)
+      ansible.windows.win_powershell:
+        script: |
+          $rules = @(
+            "Core Networking Diagnostics - ICMP Echo Request (ICMPv4-In)",
+            "Core Networking Diagnostics - ICMP Echo Request (ICMPv6-In)"
+          )
+          foreach ($rule in $rules) {
+            Enable-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
+          }
+      changed_when: false
+
+    - name: (Optional) Create explicit custom ICMP rules if built-in rules are missing
+      community.windows.win_firewall_rule:
+        name: "{{ item.name }}"
+        protocol: "{{ item.protocol }}"
+        icmp_type_code: "8:*"
+        direction: in
+        action: allow
+        enabled: true
+        state: present
+        profiles: domain,private,public
+      loop:
+        - { name: "Allow ICMPv4 Echo Request", protocol: "icmpv4" }
+        - { name: "Allow ICMPv6 Echo Request", protocol: "icmpv6" }
+      when: false   # Set to true only if you want custom rules as a fallback

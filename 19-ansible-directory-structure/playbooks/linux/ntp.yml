@@ -1,0 +1,44 @@
+---
+- name: Configure time synchronization with chrony
+  hosts: linux
+  become: true
+  gather_facts: false
+
+  vars:
+    ntp_server: "ntp01.vmware.wei"
+
+  tasks:
+    - name: Install chrony
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+        update_cache: true
+
+    - name: Disable systemd-timesyncd if present
+      ansible.builtin.systemd:
+        name: systemd-timesyncd
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Configure chrony to use internal NTP server
+      ansible.builtin.copy:
+        dest: /etc/chrony/sources.d/internal.sources
+        content: |
+          server {{ ntp_server }} iburst
+        mode: '0644'
+        owner: root
+        group: root
+      notify: Restart chrony
+
+    - name: Ensure chrony is enabled and started
+      ansible.builtin.systemd:
+        name: chrony
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart chrony
+      ansible.builtin.systemd:
+        name: chrony
+        state: restarted

@@ -1,0 +1,8 @@
+---
+# Because the inventory entry is an IP, we can still set a friendly name or other vars
+ansible_host: 10.10.10.11
+ansible_user: ansible@vmware.wei
+
+# Optional descriptive variables
+role: app-server
+environment: production

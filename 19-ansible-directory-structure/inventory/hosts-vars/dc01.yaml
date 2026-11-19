@@ -1,0 +1,8 @@
+---
+# Host-specific overrides for the domain controller
+ansible_host: dc01.vmware.wei   # optional if the inventory already uses the FQDN
+ansible_user: ansible@vmware.wei
+
+# Example of a host-specific variable
+rdp_require_nla: true
+is_domain_controller: true

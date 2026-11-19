@@ -1,0 +1,5 @@
+---
+ntp_server: "ntp01.vmware.wei"
+admin_group: "WEI"
+admin_user: "WEI"
+ansible_user: "ANSIBLE"

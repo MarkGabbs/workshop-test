@@ -1,0 +1,40 @@
+---
+- name: Service and kernel hardening
+  hosts: linux
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Disable unnecessary services (safe for servers)
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+        masked: true
+      loop:
+        - cups
+        - cups-browsed
+        - avahi-daemon
+        - bluetooth
+        - ModemManager
+        - whoopsie
+      failed_when: false
+
+    - name: Apply recommended sysctl hardening (ping remains allowed)
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - { name: 'net.ipv4.conf.all.accept_redirects',     value: '0' }
+        - { name: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+        - { name: 'net.ipv4.conf.all.send_redirects',       value: '0' }
+        - { name: 'net.ipv4.conf.default.send_redirects',   value: '0' }
+        - { name: 'net.ipv4.conf.all.accept_source_route',  value: '0' }
+        - { name: 'net.ipv4.conf.default.accept_source_route', value: '0' }
+        - { name: 'net.ipv4.icmp_echo_ignore_broadcasts',   value: '1' }
+        - { name: 'net.ipv4.icmp_ignore_bogus_error_responses', value: '1' }
+        - { name: 'net.ipv4.icmp_echo_ignore_all',          value: '0' }
+        - { name: 'net.ipv4.tcp_syncookies',                value: '1' }

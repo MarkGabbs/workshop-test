@@ -1,0 +1,12 @@
+---
+- name: Reload systemd and restart apt-daily-upgrade timer
+  ansible.builtin.systemd:
+    name: apt-daily-upgrade.timer
+    daemon_reload: true
+    state: restarted
+    enabled: true
+
+- name: Restart chrony
+  ansible.builtin.systemd:
+    name: chrony
+    state: restarted

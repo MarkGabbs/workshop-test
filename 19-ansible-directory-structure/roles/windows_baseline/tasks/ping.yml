@@ -1,0 +1,24 @@
+---
+- name: Enable File and Printer Sharing ICMP Echo Request rules (IPv4 + IPv6)
+  ansible.windows.win_powershell:
+    script: |
+      $rules = @(
+        "File and Printer Sharing (Echo Request - ICMPv4-In)",
+        "File and Printer Sharing (Echo Request - ICMPv6-In)"
+      )
+      foreach ($rule in $rules) {
+        Enable-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
+      }
+  changed_when: false
+
+- name: Enable Core Networking Diagnostics ICMP Echo Request rules (IPv4 + IPv6)
+  ansible.windows.win_powershell:
+    script: |
+      $rules = @(
+        "Core Networking Diagnostics - ICMP Echo Request (ICMPv4-In)",
+        "Core Networking Diagnostics - ICMP Echo Request (ICMPv6-In)"
+      )
+      foreach ($rule in $rules) {
+        Enable-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
+      }
+  changed_when: false

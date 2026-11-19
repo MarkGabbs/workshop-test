@@ -1,0 +1,8 @@
+---
+- name: Add AD user and AD group to local Administrators
+  ansible.windows.win_group_membership:
+    name: Administrators
+    members:
+      - "{{ ad_user }}"
+      - "{{ ad_group }}"
+    state: present

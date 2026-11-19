@@ -1,0 +1,18 @@
+---
+# Windows connection and authentication
+ansible_connection: winrm
+ansible_port: 5986
+ansible_winrm_scheme: https
+ansible_winrm_transport: kerberos          # preferred for domain-joined hosts
+# ansible_winrm_transport: ntlm            # fallback if Kerberos is not configured
+ansible_winrm_server_cert_validation: ignore
+
+# Domain credentials (vault the password)
+ansible_user: ansible@vmware.wei
+ansible_password: "{{ vault_windows_password }}"
+
+# Optional: domain-related variables used by playbooks
+domain_name: "VMWARE"
+ad_user: "VMWARE\\svc_ansible"
+ad_group: "VMWARE\\Domain Admins"
+rdp_require_nla: true

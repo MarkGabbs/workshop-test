@@ -1,0 +1,14 @@
+---
+# Example playbook that uses the roles
+
+- name: Apply Ubuntu baseline via role
+  hosts: linux
+  become: true
+  roles:
+    - ubuntu_baseline
+
+- name: Apply Windows baseline via role
+  hosts: windows
+  become: false
+  roles:
+    - windows_baseline

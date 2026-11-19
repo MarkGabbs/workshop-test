@@ -1,0 +1,9 @@
+---
+- name: Include RDP configuration
+  ansible.builtin.import_tasks: rdp.yml
+
+- name: Include ping (ICMP) configuration
+  ansible.builtin.import_tasks: ping.yml
+
+- name: Include local administrators configuration
+  ansible.builtin.import_tasks: local-admins.yml

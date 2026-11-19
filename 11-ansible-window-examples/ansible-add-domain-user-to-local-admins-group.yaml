@@ -1,0 +1,42 @@
+---
+- name: Add AD user and AD group to local Administrators
+  hosts: windows
+  gather_facts: false
+  become: false          # WinRM already runs as an elevated account
+
+  vars:
+    # Domain NetBIOS or DNS name (adjust if needed)
+    domain_name: "VMWARE"
+
+    # Existing AD user to add (use DOMAIN\user or user@domain)
+    ad_user: "VMWARE\\svc_ansible"
+
+    # Existing AD group to add
+    ad_group: "VMWARE\\Domain Admins"
+
+  tasks:
+    - name: Add AD user to local Administrators group
+      ansible.windows.win_group_membership:
+        name: Administrators
+        members:
+          - "{{ ad_user }}"
+        state: present
+
+    - name: Add AD group to local Administrators group
+      ansible.windows.win_group_membership:
+        name: Administrators
+        members:
+          - "{{ ad_group }}"
+        state: present
+
+    - name: Show current local Administrators members
+      ansible.windows.win_group_membership:
+        name: Administrators
+        state: present
+        members: []          # Empty list just to query
+      register: admin_members
+      check_mode: false
+
+    - name: Display local Administrators members
+      ansible.builtin.debug:
+        msg: "{{ admin_members.members }}"

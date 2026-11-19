@@ -1,0 +1,25 @@
+---
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+
+- name: Set UFW default policies
+  community.general.ufw:
+    default: "{{ item.default }}"
+    direction: "{{ item.direction }}"
+  loop:
+    - { default: deny,  direction: incoming }
+    - { default: allow, direction: outgoing }
+
+- name: Allow SSH
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+    comment: "SSH for Ansible and admin"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+    logging: 'low'
