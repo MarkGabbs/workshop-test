@@ -1,0 +1,30 @@
+---
+- name: Configure vDS port groups
+  hosts: localhost
+  gather_facts: false
+  vars_prompt:
+    - name: vcenter_password
+      prompt: "Enter vCenter password"
+      private: true          # hides the password as they type
+
+    # optional – if you also want them to type the username
+    - name: vcenter_username
+      prompt: "Enter vCenter username"
+      private: false
+
+  vars:
+    vcenter_hostname: "vc11.vmware.wei"   # hardcoded – fine for class
+
+  tasks:
+    - name: Create VLAN port group
+      community.vmware.vmware_dvs_portgroup:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username | default('administrator@vsphere.local') }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: false
+        portgroup_name: VLAN-100
+        switch_name: my-dvSwitch
+        vlan_id: 100
+        num_ports: 128
+        port_binding: static
+        state: present

@@ -1,0 +1,57 @@
+---
+- name: Configure Nutanix Cluster settings (interactive)
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - nutanix.ncp
+
+  vars_prompt:
+    - name: nutanix_password
+      prompt: "Enter Prism Central password"
+      private: true
+    - name: nutanix_username
+      prompt: "Enter Prism Central username"
+      default: "admin"
+      private: false
+
+  vars:
+    nutanix_host: "ntnx-cluster11.nutanix.wei"   # or IP
+    cluster_ext_id: "00000000-0000-0000-0000-000000000000"  # get this first
+    data_services_ip: "10.11.230.30"                # change to lab value
+    # Name servers and NTP below
+
+  tasks:
+    - name: Get cluster external ID (if you don't have it)
+      nutanix.ncp.ntnx_clusters_info_v2:
+        nutanix_host: "{{ nutanix_host }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs: false
+        filter: "name eq 'YourClusterName'"
+      register: cluster_info
+      when: cluster_ext_id is not defined or cluster_ext_id == "00000000-0000-0000-0000-000000000000"
+
+    - name: Set Data Services IP + Name Servers + NTP
+      nutanix.ncp.ntnx_clusters_v2:
+        nutanix_host: "{{ nutanix_host }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs: false
+        ext_id: "{{ cluster_ext_id if cluster_ext_id != '00000000-0000-0000-0000-000000000000' else cluster_info.response.entities[0].ext_id }}"
+        network:
+          external_data_service_ip:
+            ipv4:
+              value: "{{ data_services_ip }}"
+          name_server_ip_list:
+            - ipv4:
+                value: "10.11.230.11"
+            - ipv4:
+                value: "10.11.230.12"
+          ntp_server_ip_list:
+            - fqdn:
+                value: "ntp01.nutanix.wei"
+      register: cluster_update
+
+    - name: Show result
+      ansible.builtin.debug:
+        var: cluster_update

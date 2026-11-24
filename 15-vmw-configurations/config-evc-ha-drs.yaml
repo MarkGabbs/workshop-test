@@ -1,0 +1,73 @@
+---
+- name: Configure vSphere Cluster (interactive login)
+  hosts: localhost
+  gather_facts: false
+
+  vars_prompt:
+    - name: vcenter_password
+      prompt: "Enter vCenter password"
+      private: true
+    - name: vcenter_username
+      prompt: "Enter vCenter username"
+      default: "administrator@vsphere.local"
+      private: false
+
+  vars:
+    vcenter_hostname: "vc11.vmware.wei"   # change to your lab vCenter
+    datacenter_name: "Datacenter"                 # change to match lab
+    cluster_name: "Cluster01"                     # change to match lab
+    # Students set this after checking the hosts, or you can hardcode the lab value
+    # Common examples: intel-nehalem, intel-sandybridge, intel-haswell, intel-broadwell, amd-greyhound
+    evc_mode: "intel-haswell"
+
+  tasks:
+    - name: Enable HA (tolerate 1 host failure)
+      community.vmware.vmware_cluster_ha:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: false
+        datacenter_name: "{{ datacenter_name }}"
+        cluster_name: "{{ cluster_name }}"
+        enable: true
+        # Slot-based is the classic way to say "tolerate N host failures"
+        slot_based_admission_control:
+          failover_level: 1
+        # Performance degradation VMs tolerate = 0%
+        # (advanced setting – may need adjustment depending on vCenter version)
+        advanced_settings:
+          das.vmMemoryMinMB: "0"          # example; confirm in your lab if needed
+      delegate_to: localhost
+
+    - name: Configure DRS (fully automated, threshold 3, VM automation on, scalable shares, DPM off)
+      community.vmware.vmware_cluster_drs:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: false
+        datacenter_name: "{{ datacenter_name }}"
+        cluster_name: "{{ cluster_name }}"
+        enable: true
+        drs_default_vm_behavior: fullyAutomated
+        drs_vmotion_rate: 3
+        drs_enable_vm_behavior_overrides: true
+        # Scalable shares + disable DPM are often controlled via advanced settings or separate module
+        advanced_settings:
+          # Scalable shares (vSphere 7+)
+          # Key may vary slightly by version – verify in lab if it doesn’t apply
+          'config.drs.scalableShares': 'true'
+          # Explicitly disable DPM
+          'config.drs.dpmEnabled': 'false'
+      delegate_to: localhost
+
+    - name: Enable EVC at the specified mode
+      community.vmware.vmware_evc_mode:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: false
+        datacenter_name: "{{ datacenter_name }}"
+        cluster_name: "{{ cluster_name }}"
+        evc_mode: "{{ evc_mode }}"
+        state: present
+      delegate_to: localhost

@@ -1,0 +1,54 @@
+---
+- name: Create Nutanix VLAN Subnet (interactive login)
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - nutanix.ncp
+
+  vars_prompt:
+    - name: nutanix_password
+      prompt: "Enter Prism Central password"
+      private: true
+    - name: nutanix_username
+      prompt: "Enter Prism Central username"
+      default: "admin"
+      private: false
+
+  vars:
+    nutanix_host: "ntnx-pc11.nutanix.wei"   # or IP
+    cluster_name: "ntnx-cluster11"            # change to match lab
+    subnet_name: "VLAN-100"
+    vlan_id: 100
+    # Optional IPAM settings (comment out if you only want a basic VLAN)
+    network_ip: "10.100.0.0"
+    network_prefix: 24
+    gateway_ip: "10.100.0.1"
+    pool_start: "10.100.0.10"
+    pool_end: "10.100.0.250"
+
+  tasks:
+    - name: Create VLAN subnet
+      nutanix.ncp.ntnx_subnets:          # or ntnx_subnets_v2 for newer v4 API
+        nutanix_host: "{{ nutanix_host }}"
+        nutanix_username: "{{ nutanix_username }}"
+        nutanix_password: "{{ nutanix_password }}"
+        validate_certs: false
+        state: present
+        name: "{{ subnet_name }}"
+        vlan_subnet:
+          vlan_id: "{{ vlan_id }}"
+          cluster:
+            name: "{{ cluster_name }}"
+          # Optional: enable IPAM + DHCP pool
+          ipam:
+            network_ip: "{{ network_ip }}"
+            network_prefix: "{{ network_prefix }}"
+            gateway_ip: "{{ gateway_ip }}"
+            ip_pools:
+              - start_ip: "{{ pool_start }}"
+                end_ip: "{{ pool_end }}"
+      register: subnet_result
+
+    - name: Show result
+      ansible.builtin.debug:
+        var: subnet_result
