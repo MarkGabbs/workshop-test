@@ -1,0 +1,67 @@
+---
+# windows_updates.yml
+# Playbook to check for and apply all available Windows updates
+#
+# Requirements:
+# - ansible.windows collection installed (ansible-galaxy collection install ansible.windows)
+# - Target hosts must be reachable via WinRM (or SSH if configured)
+# - Connection user must be a local Administrator
+# - Windows Update service must be running and able to reach its update source
+#   (Microsoft Update, WSUS, etc.)
+#
+# Usage:
+#   ansible-playbook -i inventory windows_updates.yml
+#
+# Optional: run in check mode first to see what would be installed
+#   ansible-playbook -i inventory windows_updates.yml --check
+
+- name: Check for and apply all Windows updates
+  hosts: windows
+  gather_facts: false
+  # serial: 5   # uncomment to limit concurrency if desired
+
+  tasks:
+    - name: Search for available Windows updates
+      ansible.windows.win_updates:
+        category_names: '*'
+        state: searched
+        log_path: C:\ansible_wu_search.log
+      register: search_result
+
+    - name: Display available updates
+      ansible.builtin.debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          Found updates: {{ search_result.found_update_count | default(0) }}
+          Reboot required after install: {{ search_result.reboot_required | default(false) }}
+          {% if search_result.updates is defined and search_result.updates %}
+          Updates:
+          {% for id, update in search_result.updates.items() %}
+          - {{ update.title | default('N/A') }} ({{ update.kb | default([]) | join(', ') }})
+          {% endfor %}
+          {% else %}
+          No updates found.
+          {% endif %}
+
+    - name: Install all available Windows updates (with automatic reboots)
+      ansible.windows.win_updates:
+        category_names: '*'
+        state: installed
+        reboot: true
+        reboot_timeout: 3600          # 1 hour – increase if needed for large cumulative updates
+        log_path: C:\ansible_wu_install.log
+      register: install_result
+
+    - name: Summarize installed updates
+      ansible.builtin.debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          Installed: {{ install_result.installed_update_count | default(0) }}
+          Failed: {{ install_result.failed_update_count | default(0) }}
+          Reboot still required: {{ install_result.reboot_required | default(false) }}
+          {% if install_result.updates is defined and install_result.updates %}
+          Installed updates:
+          {% for id, update in install_result.updates.items() %}
+          - {{ update.title | default('N/A') }}
+          {% endfor %}
+          {% endif %}
